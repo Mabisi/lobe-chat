@@ -1,16 +1,20 @@
+import { Empty } from 'antd';
 import { createStyles, useResponsive } from 'antd-style';
 import Link from 'next/link';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Center } from 'react-layout-kit';
 import LazyLoad from 'react-lazy-load';
 
 import { SESSION_CHAT_URL } from '@/const/url';
+import { featureFlagsSelectors, useFeatureFlagStore } from '@/store/featureFlags';
 import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
 import { LobeAgentSession } from '@/types/session';
 
+import SkeletonList from '../SkeletonList';
 import AddButton from './AddButton';
 import SessionItem from './Item';
-import SkeletonList from './SkeletonList';
 
 const useStyles = createStyles(
   ({ css }) => css`
@@ -19,40 +23,35 @@ const useStyles = createStyles(
 );
 
 interface SessionListProps {
-  dataSource: LobeAgentSession[];
+  dataSource?: LobeAgentSession[];
   groupId?: string;
   showAddButton?: boolean;
 }
 const SessionList = memo<SessionListProps>(({ dataSource, groupId, showAddButton = true }) => {
-  const [activeSession, switchSession, isInit] = useSessionStore((s) => [
-    s.activeSession,
-    s.switchSession,
-    sessionSelectors.isSessionListInit(s),
-  ]);
+  const { t } = useTranslation('chat');
+  const isInit = useSessionStore((s) => sessionSelectors.isSessionListInit(s));
+  const { showCreateSession } = useFeatureFlagStore(featureFlagsSelectors);
   const { styles } = useStyles();
 
   const { mobile } = useResponsive();
 
+  const isEmpty = !dataSource || dataSource.length === 0;
   return !isInit ? (
     <SkeletonList />
-  ) : dataSource.length > 0 ? (
+  ) : !isEmpty ? (
     dataSource.map(({ id }) => (
       <LazyLoad className={styles} key={id}>
-        <Link
-          aria-label={id}
-          href={SESSION_CHAT_URL(id, mobile)}
-          onClick={(e) => {
-            e.preventDefault();
-            if (mobile) switchSession(id);
-            else activeSession(id);
-          }}
-        >
+        <Link aria-label={id} href={SESSION_CHAT_URL(id, mobile)}>
           <SessionItem id={id} />
         </Link>
       </LazyLoad>
     ))
-  ) : (
+  ) : showCreateSession ? (
     showAddButton && <AddButton groupId={groupId} />
+  ) : (
+    <Center>
+      <Empty description={t('emptyAgent')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+    </Center>
   );
 });
 

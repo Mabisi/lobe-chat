@@ -1,9 +1,11 @@
+import { notFound } from 'next/navigation';
 import { PropsWithChildren } from 'react';
 
-import { SettingsTabs } from '@/store/global/initialState';
-
-import SettingLayout from '../layout.server';
+import { serverFeatureFlags } from '@/config/server/featureFlags';
 
 export default ({ children }: PropsWithChildren) => {
-  return <SettingLayout activeTab={SettingsTabs.LLM}>{children}</SettingLayout>;
+  const showLLM = serverFeatureFlags().showLLM;
+  if (!showLLM) return notFound();
+
+  return children;
 };
